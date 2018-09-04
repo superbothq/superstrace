@@ -237,11 +237,11 @@ usage(void)
 
 	printf("\
 usage: strace [-ACdffhi" K_OPT "qqrtttTvVwxxyyzZ] [-I n] [-b execve] [-e expr]...\n\
-              [-a column] [-o file] [-s strsize] [-X format] [-P path]...\n\
-              [-p pid]...\n\
+              [-a column] [-o file] [-s strsize] [-X format] [-O overhead]\n\
+              [-S sortby] [-P path]... [-p pid]... [-U columns]\n\
 	      { -p pid | [-D] [-E var=val]... [-u username] PROG [ARGS] }\n\
    or: strace -c[dfwzZ] [-I n] [-b execve] [-e expr]... [-O overhead]\n\
-              [-S sortby] [-P path]... [-p pid]...\n\
+              [-S sortby] [-P path]... [-p pid]... [-U columns]\n\
               { -p pid | [-D] [-E var=val]... [-u username] PROG [ARGS] }\n\
 \n\
 Output format:\n\
@@ -278,6 +278,9 @@ Statistics:\n\
   -O overhead    set overhead for tracing syscalls to OVERHEAD usecs\n\
   -S sortby      sort syscall counts by: time, avg_time, calls, errors, name,\n\
                  nothing (default %s)\n\
+  -U columns     show specific columns in the summary report: comma-separated\n\
+                 list of time_percent, total_time, avg_time, calls, errors, name\n\
+                 (default time_percent,total_time,avg_time,calls,errors,name)\n\
   -w             summarise syscall latency (default is system time)\n\
 \n\
 Filtering:\n\
@@ -1606,7 +1609,7 @@ init(int argc, char *argv[])
 #ifdef ENABLE_STACKTRACE
 	    "k"
 #endif
-	    "a:Ab:cCdDe:E:fFhiI:o:O:p:P:qrs:S:tTu:vVwxX:yzZ")) != EOF) {
+	    "a:Ab:cCdDe:E:fFhiI:o:O:p:P:qrs:S:tTu:U:vVwxX:yzZ")) != EOF) {
 		switch (c) {
 		case 'a':
 			acolumn = string_to_uint(optarg);
@@ -1705,6 +1708,9 @@ init(int argc, char *argv[])
 			break;
 		case 'u':
 			username = optarg;
+			break;
+		case 'U':
+			set_count_summary_columns(optarg);
 			break;
 		case 'v':
 			qualify("abbrev=none");

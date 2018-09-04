@@ -177,6 +177,58 @@ set_sortby(const char *sortby)
 	error_msg_and_help("invalid sortby: '%s'", sortby);
 }
 
+void
+set_count_summary_columns(const char *s)
+{
+	uint8_t visible[CSC_MAX] = { 0 };
+	const char *pos = s;
+	const char *prev = s;
+	size_t cur = 0;
+
+	memset(columns, 0, sizeof(columns));
+
+	do {
+		bool found = false;
+
+		pos = strchrnul(prev, ',');
+
+		for (size_t i = 0; i < ARRAY_SIZE(column_aliases); i++) {
+			if (strncmp(column_aliases[i].name, prev, pos - prev) ||
+			    column_aliases[i].name[pos - prev])
+				continue;
+			if (column_aliases[i].column == CSC_NONE ||
+			    column_aliases[i].column >= CSC_MAX)
+				continue;
+
+			if (visible[column_aliases[i].column])
+				error_msg_and_help("call summary column "
+						   "has been provided more "
+						   "than once: '%s' (-U option "
+						   "residual: '%s')",
+						   column_aliases[i].name,
+						   prev);
+
+			columns[cur++] = column_aliases[i].column;
+			visible[column_aliases[i].column] = 1;
+			found = true;
+
+			break;
+		}
+
+		if (!found)
+			error_msg_and_help("unknown column name: '%.*s'",
+					   (int) (pos - prev), prev);
+
+		prev = pos + 1;
+	} while (*pos);
+
+	/*
+	 * Always enable syscall name column, as without it table is meaningless
+	 */
+	if (!visible[CSC_SC_NAME])
+		columns[cur++] = CSC_SC_NAME;
+}
+
 int
 set_overhead(const char *str)
 {
