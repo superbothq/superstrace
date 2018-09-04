@@ -276,10 +276,11 @@ Statistics:\n\
                  summary\n\
   -C             like -c but also print regular output\n\
   -O overhead    set overhead for tracing syscalls to OVERHEAD usecs\n\
-  -S sortby      sort syscall counts by: time, avg_time, calls, errors, name,\n\
-                 nothing (default %s)\n\
+  -S sortby      sort syscall counts by: time, min_time, max_time, avg_time,\n\
+                 calls, errors, name, nothing (default %s)\n\
   -U columns     show specific columns in the summary report: comma-separated\n\
-                 list of time_percent, total_time, avg_time, calls, errors, name\n\
+                 list of time_percent, total_time, min_time, max_time, \n\
+                 avg_time, calls, errors, name\n\
                  (default time_percent,total_time,avg_time,calls,errors,name)\n\
   -w             summarise syscall latency (default is system time)\n\
 \n\
