@@ -276,8 +276,8 @@ Statistics:\n\
                  summary\n\
   -C             like -c but also print regular output\n\
   -O overhead    set overhead for tracing syscalls to OVERHEAD usecs\n\
-  -S sortby      sort syscall counts by: time, calls, errors, name, nothing\n\
-                 (default %s)\n\
+  -S sortby      sort syscall counts by: time, avg_time, calls, errors, name,\n\
+                 nothing (default %s)\n\
   -w             summarise syscall latency (default is system time)\n\
 \n\
 Filtering:\n\
