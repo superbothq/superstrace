@@ -1360,8 +1360,17 @@ print_array_ex(struct tcb *const tcp,
 			break;
 		}
 	}
-	if ((cur != start_addr_l) || !tfetch_mem_func)
+
+	if ((cur != start_addr_l) || !tfetch_mem_func) {
+		if (flags & PAF_ARRAY_TRUNCATED) {
+			if (cur != start_addr_l)
+				tprints(", ");
+
+			tprints("...");
+		}
+
 		tprints("]");
+	}
 
 	return cur >= end_addr;
 }
