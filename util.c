@@ -1275,7 +1275,7 @@ bool
 print_array_ex(struct tcb *const tcp,
 	       const kernel_ulong_t start_addr,
 	       const size_t nmemb,
-	       void *const elem_buf,
+	       void * elem_buf,
 	       const size_t elem_size,
 	       tfetch_mem_fn tfetch_mem_func,
 	       print_fn print_func,
@@ -1284,7 +1284,7 @@ print_array_ex(struct tcb *const tcp,
 	       const struct xlat *index_xlat,
 	       const char *index_dflt)
 {
-	if (!start_addr) {
+	if (tfetch_mem_func && !start_addr) {
 		tprints("NULL");
 		return false;
 	}
@@ -1294,11 +1294,17 @@ print_array_ex(struct tcb *const tcp,
 		return false;
 	}
 
+	const kernel_ulong_t start_addr_l = tfetch_mem_func
+		? start_addr : (uintptr_t) elem_buf;
 	const size_t size = nmemb * elem_size;
-	const kernel_ulong_t end_addr = start_addr + size;
+	const kernel_ulong_t end_addr = tfetch_mem_func
+		? start_addr_l + size : (uintptr_t) (start_addr_l + size);
 
 	if (end_addr <= start_addr || size / elem_size != nmemb) {
-		printaddr(start_addr);
+		if (tfetch_mem_func)
+			printaddr(start_addr);
+		else
+			tprints("???");
 		return false;
 	}
 
@@ -1309,21 +1315,25 @@ print_array_ex(struct tcb *const tcp,
 	kernel_ulong_t idx = 0;
 	enum xlat_style xlat_style = flags & XLAT_STYLE_MASK;
 
-	for (cur = start_addr; cur < end_addr; cur += elem_size, idx++) {
-		if (cur != start_addr)
+	for (cur = start_addr_l; cur < end_addr; cur += elem_size, idx++) {
+		if (cur != start_addr_l)
 			tprints(", ");
 
-		if (!tfetch_mem_func(tcp, cur, elem_size, elem_buf)) {
-			if (cur == start_addr)
-				printaddr(cur);
-			else {
-				tprints("...");
-				printaddr_comment(cur);
+		if (tfetch_mem_func) {
+			if (!tfetch_mem_func(tcp, cur, elem_size, elem_buf)) {
+				if (cur == start_addr_l)
+					printaddr(cur);
+				else {
+					tprints("...");
+					printaddr_comment(cur);
+				}
+				break;
 			}
-			break;
+		} else {
+			elem_buf = (void *) (uintptr_t) cur;
 		}
 
-		if (cur == start_addr)
+		if (cur == start_addr_l)
 			tprints("[");
 
 		if (cur >= abbrev_end) {
@@ -1350,7 +1360,7 @@ print_array_ex(struct tcb *const tcp,
 			break;
 		}
 	}
-	if (cur != start_addr)
+	if ((cur != start_addr_l) || !tfetch_mem_func)
 		tprints("]");
 
 	return cur >= end_addr;
