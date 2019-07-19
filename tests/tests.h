@@ -50,6 +50,19 @@
 #  define XLAT_VERBOSE 0
 # endif
 
+# if XLAT_RAW
+#  define XLAT_KNOWN(val_, str_) #val_
+#  define XLAT_UNKNOWN(val_, dflt_) #val_
+# elif XLAT_VERBOSE
+#  define XLAT_KNOWN(val_, str_) #val_ " /* " str_ " */"
+#  define XLAT_UNKNOWN(val_, dflt_) #val_ " /* " dflt_ " */"
+# else
+#  define XLAT_KNOWN(val_, str_) str_
+#  define XLAT_UNKNOWN(val_, dflt_) #val_ " /* " dflt_ " */"
+# endif
+
+# define XLAT_STR(v_) sprintxlat(#v_, v_, NULL)
+
 # ifndef DEFAULT_STRLEN
 /* Default maximum # of bytes printed in printstr et al. */
 #  define DEFAULT_STRLEN 32
