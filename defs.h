@@ -54,7 +54,12 @@ const char *strerror(int);
 #  undef stpcpy
 #  define stpcpy strace_stpcpy
 extern char *stpcpy(char *dst, const char *src);
-# endif
+# endif /* !HAVE_STPCPY */
+# ifndef HAVE_STRCHRNUL
+#  undef strchrnul
+#  define strchrnul strace_strchrnul
+extern char *strchrnul(const char *s, int c);
+# endif /* !HAVE_STRCHRNUL */
 
 /* Glibc has an efficient macro for sigemptyset
  * (it just does one or two assignments of 0 to internal vector of longs).

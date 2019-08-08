@@ -281,6 +281,7 @@ AC_CHECK_FUNCS(m4_normalize([
 	pwritev
 	readahead
 	signalfd
+	strchrnul
 	stpcpy
 	strerror
 	strndup

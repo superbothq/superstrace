@@ -179,6 +179,16 @@ stpcpy(char *dst, const char *src)
 }
 #endif
 
+#if !defined HAVE_STRCHRNUL
+char *
+strchrnul(const char *s, int c)
+{
+	char *p = strchr(s, c);
+
+	return p ?: (char *) (s + strlen(s));
+}
+#endif
+
 /* Find a next bit which is set.
  * Starts testing at cur_bit.
  * Returns -1 if no more bits are set.
