@@ -32,6 +32,7 @@ clock_adjtime
 clock_nanosleep
 clock_xettime
 clone-flags
+clone3
 copy_file_range
 creat
 delete_module

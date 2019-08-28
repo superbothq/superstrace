@@ -18,6 +18,8 @@
 # define CSIGNAL 0x000000ff
 #endif
 
+#include "print_fields.h"
+
 #include "xlat/clone_flags.h"
 #include "xlat/setns_types.h"
 #include "xlat/unshare_flags.h"
@@ -136,6 +138,173 @@ SYS_FUNC(clone)
 	}
 	return 0;
 }
+
+
+struct strace_clone_args {
+	uint64_t flags;
+	uint64_t /* int * */ pidfd;
+	uint64_t /* int * */ child_tid;
+	uint64_t /* int * */ parent_tid;
+	uint64_t /* int */   exit_signal;
+	uint64_t stack;
+	uint64_t stack_size;
+	uint64_t tls;
+};
+
+/**
+ * Print a region of tracee memory only in case non-zero bytes are present
+ * there.  It almost fits into printstr_ex, but it has too specific behaviour
+ * peculiarities (like printing of ellipsis on error) to readily integrate
+ * it there.
+ *
+ * @param prefix A string printed in cases something is going to be printed.
+ * @param addr   Address in tracee's memory.
+ * @param len    Size of tracee's memory region in size to be inspected.
+ *               Caller is responsible for imposing a sensible limit here.
+ * @param style  Passed to string_quote as "style" parameter.
+ */
+static void
+print_nonzero_bytes(struct tcb *const tcp, const char *prefix,
+		    kernel_ulong_t start_addr, kernel_ulong_t start_offs,
+		    kernel_ulong_t total_len, const unsigned int style)
+{
+	if (start_offs >= total_len)
+		return;
+
+	const kernel_ulong_t addr = start_addr + start_offs;
+	const kernel_ulong_t len = total_len - start_offs;
+	const kernel_ulong_t size = MIN(len, max_strlen);
+
+	char *str = malloc(len);
+	char *outstr = malloc(4 * size + 3);
+
+	if (!str || !outstr) {
+		error_func_msg("failed to allocate buffers");
+		tprintf("%s...", prefix);
+
+		goto out;
+	}
+
+	if (umoven(tcp, addr, len, str)) {
+		tprintf("%s...", prefix);
+
+		goto out;
+	}
+
+	if (!is_filled(str, 0, len)) {
+		tprints(prefix);
+		tprintf("/* bytes %" PRI_klu "..%" PRI_klu " */ ",
+			start_offs, total_len - 1);
+
+		string_quote(str, outstr, size, style, NULL);
+		tprints(outstr);
+
+		if (size < len)
+			tprints("...");
+	}
+
+out:
+	free(str);
+	free(outstr);
+}
+
+SYS_FUNC(clone3)
+{
+	static const size_t minsz = offsetofend(struct strace_clone_args, tls);
+
+	const kernel_ulong_t addr = tcp->u_arg[0];
+	const kernel_ulong_t size = tcp->u_arg[1];
+
+	struct strace_clone_args arg = { 0 };
+	kernel_ulong_t fetch_size;
+
+	fetch_size = MIN(size, sizeof(arg));
+
+	if (entering(tcp)) {
+		if (fetch_size < minsz) {
+			printaddr(addr);
+			goto out;
+		} else if (umoven_or_printaddr(tcp, addr, fetch_size, &arg)) {
+			goto out;
+		}
+
+		PRINT_FIELD_FLAGS("{", arg, flags, clone_flags,
+				  "CLONE_???");
+
+		if (arg.flags & CLONE_PIDFD)
+			PRINT_FIELD_ADDR64(", ", arg, pidfd);
+
+		if (arg.flags & (CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID))
+			PRINT_FIELD_ADDR64(", ", arg, child_tid);
+
+		if (arg.flags & CLONE_PARENT_SETTID)
+			PRINT_FIELD_ADDR64(", ", arg, parent_tid);
+
+		tprints(", exit_signal=");
+		printsignal(arg.exit_signal);
+
+		PRINT_FIELD_ADDR64(", ", arg, stack);
+		PRINT_FIELD_X(", ", arg, stack_size);
+
+		if (arg.flags & CLONE_SETTLS) {
+			tprints(", tls=");
+			print_tls_arg(tcp, arg.tls);
+		}
+
+		if (size > fetch_size)
+			print_nonzero_bytes(tcp, ", ", addr, fetch_size,
+					    MIN(size, get_pagesize()),
+					    QUOTE_FORCE_HEX);
+
+		tprints("}");
+
+		if ((arg.flags & (CLONE_PIDFD | CLONE_PARENT_SETTID)) ||
+		    (size > fetch_size))
+			return 0;
+
+		goto out;
+	}
+
+	/* exiting */
+
+	if (syserror(tcp))
+		goto out;
+
+	if (umoven(tcp, addr, fetch_size, &arg)) {
+		tprints(" => ");
+		printaddr(addr);
+		goto out;
+	}
+
+	static const char *initial_pfx = " => {";
+	const char *pfx = initial_pfx;
+
+	if (arg.flags & CLONE_PIDFD) {
+		tprintf("%spidfd=", pfx);
+		printnum_fd(tcp, arg.pidfd);
+		pfx = ", ";
+	}
+
+	if (arg.flags & CLONE_PARENT_SETTID) {
+		tprintf("%sparent_tid=", pfx);
+		printnum_int(tcp, arg.parent_tid, "%u"); /* TID */
+		pfx = ", ";
+	}
+
+	if (size > fetch_size)
+		print_nonzero_bytes(tcp, pfx, addr, fetch_size,
+				    MIN(size, get_pagesize()),
+				    QUOTE_FORCE_HEX);
+
+	if (pfx != initial_pfx)
+		tprints("}");
+
+out:
+	tprintf(", %" PRI_klu, size);
+
+	return RVAL_DECODED;
+}
+
 
 SYS_FUNC(setns)
 {
