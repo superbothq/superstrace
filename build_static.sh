@@ -10,12 +10,13 @@ BUILDFLAG=""
 # This may be unsafe if your libc expects 16 byte stack alignment
 # on function entry.
 
-export CC="x86_64-gcc"
+export CC="gcc"
 
 export CFLAGS="-Os\
  -fomit-frame-pointer\
  -static\
  -static-libgcc\
+ -pthread \
  -ffunction-sections -fdata-sections\
  -falign-functions=1 -falign-jumps=1 -falign-labels=1 -falign-loops=1\
  -fno-unwind-tables\

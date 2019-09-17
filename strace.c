@@ -40,6 +40,7 @@
 #include "xstring.h"
 #include "delay.h"
 #include "wait.h"
+#include "ws_handler.h"
 
 /* In some libc, these aren't declared. Do it ourself: */
 extern char **environ;
@@ -549,6 +550,18 @@ void tprintf(const char *fmt, ...)
 	tvprintf(fmt, args);
 	va_end(args);
 }
+
+void superprint(const char *fmt, ...)
+{
+	printf("YEET!\n");
+	return;
+	va_list args;
+	va_start(args, fmt);
+	tvprintf(fmt, args);
+	va_end(args);
+}
+
+#define tprintf superprint
 
 #ifndef HAVE_FPUTS_UNLOCKED
 #define fputs_unlocked fputs
